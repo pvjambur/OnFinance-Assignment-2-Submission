@@ -1,22 +1,68 @@
-import { useState } from 'react';
-import { Database, RefreshCw, Trash2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Database, RefreshCw, Trash2, Loader2 } from 'lucide-react';
 import { MainLayout } from '@/components/layouts/MainLayout';
 import { QueuePanel } from '@/components/QueuePanel';
-import { mockQueues } from '@/data/mockData';
+import { api } from '@/services/api';
 import { cn } from '@/lib/utils';
+import type { Queue } from '@/types';
 
 const QueuesPage = () => {
-  const [selectedQueue, setSelectedQueue] = useState(mockQueues[0]?.name || '');
+  const [queues, setQueues] = useState<Queue[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedQueue, setSelectedQueue] = useState('');
 
-  const selectedQueueData = mockQueues.find(q => q.name === selectedQueue);
-  const totalTasks = mockQueues.reduce((sum, q) => sum + q.tasks.length, 0);
-  const criticalTasks = mockQueues.flatMap(q => q.tasks).filter(t => t.priority.level === 'critical').length;
+  useEffect(() => {
+    const fetchData = async () => {
+      const snapshot = await api.getLatestSnapshot();
+      if (snapshot && snapshot.queues) {
+        setQueues(snapshot.queues);
+        if (snapshot.queues.length > 0 && !selectedQueue) {
+          setSelectedQueue(snapshot.queues[0].name);
+        }
+      }
+      setLoading(false);
+    };
+
+    fetchData();
+
+    const subscription = api.subscribeToSnapshots((snapshot) => {
+      if (snapshot && snapshot.queues) {
+        setQueues(snapshot.queues);
+        // If selected queue no longer exists, reset selection
+        if (selectedQueue && !snapshot.queues.find(q => q.name === selectedQueue)) {
+          if (snapshot.queues.length > 0) setSelectedQueue(snapshot.queues[0].name);
+        }
+        // If nothing selected and we have queues, select first
+        if (!selectedQueue && snapshot.queues.length > 0) {
+          setSelectedQueue(snapshot.queues[0].name);
+        }
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [selectedQueue]);
+
+  const selectedQueueData = queues.find(q => q.name === selectedQueue);
+  const totalTasks = queues.reduce((sum, q) => sum + q.tasks.length, 0);
+  const criticalTasks = queues.flatMap(q => q.tasks).filter(t => t.priority.level === 'critical').length;
 
   const getQueueColor = (name: string) => {
     if (name.includes('dead-letter')) return 'bg-primary/10 border-primary/30 text-primary';
     if (name.includes('output')) return 'bg-accent/10 border-accent/30 text-accent';
     return 'bg-lavender/10 border-lavender/30 text-lavender';
   };
+
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="flex h-[80vh] items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-secondary" />
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
@@ -47,7 +93,10 @@ const QueuesPage = () => {
             </div>
 
             <div className="divide-y divide-border">
-              {mockQueues.map((queue) => (
+              {queues.length === 0 && (
+                <div className="p-4 text-sm text-muted">No queues active.</div>
+              )}
+              {queues.map((queue) => (
                 <button
                   key={queue.name}
                   onClick={() => setSelectedQueue(queue.name)}
@@ -61,8 +110,8 @@ const QueuesPage = () => {
                     <span className={cn(
                       "px-2 py-0.5 rounded text-[10px] font-bold border",
                       queue.tasks.length > 5 ? "bg-primary/20 text-primary border-primary/30" :
-                      queue.tasks.length > 0 ? "bg-secondary/20 text-secondary border-secondary/30" :
-                      "bg-muted/10 text-muted border-muted/30"
+                        queue.tasks.length > 0 ? "bg-secondary/20 text-secondary border-secondary/30" :
+                          "bg-muted/10 text-muted border-muted/30"
                     )}>
                       {queue.tasks.length}
                     </span>
@@ -74,8 +123,8 @@ const QueuesPage = () => {
                         className={cn(
                           "px-1.5 py-0.5 rounded text-[8px] font-bold uppercase border",
                           task.priority.level === 'critical' ? "bg-primary/10 text-primary border-primary/20" :
-                          task.priority.level === 'high' ? "bg-secondary/10 text-secondary border-secondary/20" :
-                          "bg-muted/10 text-muted border-muted/20"
+                            task.priority.level === 'high' ? "bg-secondary/10 text-secondary border-secondary/20" :
+                              "bg-muted/10 text-muted border-muted/20"
                         )}
                       >
                         {task.priority.level}
@@ -124,6 +173,11 @@ const QueuesPage = () => {
               </div>
               <QueuePanel queues={[selectedQueueData]} />
             </>
+          )}
+          {!selectedQueueData && !loading && (
+            <div className="flex h-full items-center justify-center text-muted">
+              Select a queue to view details
+            </div>
           )}
         </div>
       </div>

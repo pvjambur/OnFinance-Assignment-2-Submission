@@ -2,6 +2,17 @@
 
 **Follow these steps exactly to restart from the beginning.**
 
+## 0. Developer Setup (Python Backend)
+If you are running Python scripts locally (outside Kubernetes), set up your environment:
+```powershell
+# Create venv
+python -m venv venv
+.\venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
 ## 1. Clean Slate (Reset)
 Run this to clear any broken state:
 ```powershell
@@ -53,6 +64,10 @@ minikube kubectl -- logs -l app=k8s-collector -n oracle-monitor
 Open a new terminal for this:
 ```bash
 cd frontend
+# (Optional) Verify .env contains your Supabase keys
+# cp .env.example .env
+
+npm install
 npm run dev
 ```
 > Go to **http://localhost:5173**. You should see the glass dashboard.

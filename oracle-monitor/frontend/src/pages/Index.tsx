@@ -1,27 +1,108 @@
-import { Cpu, Server, Radio, Zap, Activity } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Cpu, Server, Radio, Zap, Activity, Loader2 } from 'lucide-react';
 import { MainLayout } from '@/components/layouts/MainLayout';
 import { StatCard } from '@/components/StatCard';
 import { PodMetrics } from '@/components/PodMetrics';
 import { QueuePanel } from '@/components/QueuePanel';
 import { AlertsTicker } from '@/components/AlertsTicker';
-import { mockAgents, mockWorkload, mockQueues, mockLLMModels, mockAlerts } from '@/data/mockData';
+import { api } from '@/services/api';
+import type { Agent, Workload, Queue, LLMModel, Alert } from '@/types';
 
 const Index = () => {
-  // Calculate stats from mock data
-  const activeAgents = mockAgents.filter(a => a.activity.active_task_ids.length > 0).length;
-  const totalPods = mockWorkload.reduce((sum, w) => sum + w.pods.length, 0);
-  const queuedTasks = mockQueues.reduce((sum, q) => sum + q.tasks.length, 0);
-  const llmThroughput = mockLLMModels.reduce((sum, m) => sum + m.tpm, 0);
-  
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [workload, setWorkload] = useState<Workload[]>([]);
+  const [queues, setQueues] = useState<Queue[]>([]);
+  const [llmModels, setLlmModels] = useState<LLMModel[]>([]);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const [snapshot, logs] = await Promise.all([
+        api.getLatestSnapshot(),
+        api.getLogs(50) // Fetch recent logs for alerts
+      ]);
+
+      if (snapshot) {
+        setAgents(snapshot.agents || []);
+        setWorkload(snapshot.workload || []);
+        setQueues(snapshot.queues || []);
+        setLlmModels(snapshot.litellm || []);
+      }
+
+      if (logs) {
+        // Convert logs to alerts (filter for warnings/errors)
+        const newAlerts: Alert[] = logs
+          .filter(l => l.level === 'warning' || l.level === 'error')
+          .map(l => ({
+            id: l.id,
+            level: l.level as 'warning' | 'error',
+            message: l.message,
+            timestamp: l.timestamp,
+            source: l.source,
+            acknowledged: false
+          }));
+        setAlerts(newAlerts);
+      }
+
+      setLoading(false);
+    };
+
+    fetchData();
+
+    const subscription = api.subscribeToSnapshots((snapshot) => {
+      if (snapshot) {
+        setAgents(snapshot.agents || []);
+        setWorkload(snapshot.workload || []);
+        setQueues(snapshot.queues || []);
+        setLlmModels(snapshot.litellm || []);
+      }
+      // Refresh logs/alerts on new snapshot
+      api.getLogs(50).then(logs => {
+        const newAlerts: Alert[] = logs
+          .filter(l => l.level === 'warning' || l.level === 'error')
+          .map(l => ({
+            id: l.id,
+            level: l.level as 'warning' | 'error',
+            message: l.message,
+            timestamp: l.timestamp,
+            source: l.source,
+            acknowledged: false
+          }));
+        setAlerts(newAlerts);
+      });
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  // Calculate stats from real data
+  const activeAgents = agents.filter(a => a.activity.active_task_ids.length > 0).length;
+  const totalPods = workload.reduce((sum, w) => sum + w.pods.length, 0);
+  const queuedTasks = queues.reduce((sum, q) => sum + q.tasks.length, 0);
+  const llmThroughput = llmModels.reduce((sum, m) => sum + m.tpm, 0);
+
   // Filter only high priority tasks for the condensed queue view
-  const highPriorityQueues = mockQueues.map(q => ({
+  const highPriorityQueues = queues.map(q => ({
     ...q,
     tasks: q.tasks.filter(t => t.priority.level === 'critical' || t.priority.level === 'high')
   })).filter(q => q.tasks.length > 0);
 
   // Calculate cluster health percentage
-  const runningPods = mockWorkload.flatMap(w => w.pods).filter(p => p.status === 'Running').length;
-  const clusterHealth = Math.round((runningPods / totalPods) * 100);
+  const runningPods = workload.flatMap(w => w.pods).filter(p => p.status === 'Running').length;
+  const clusterHealth = totalPods > 0 ? Math.round((runningPods / totalPods) * 100) : 100;
+
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="flex h-[80vh] items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
@@ -46,7 +127,7 @@ const Index = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
         <StatCard
           label="Active Agents"
-          value={`${activeAgents}/${mockAgents.length}`}
+          value={`${activeAgents}/${agents.length}`}
           icon={<Cpu />}
           trend="up"
           color="coral"
@@ -79,7 +160,7 @@ const Index = () => {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 mb-8">
         {/* Left Column - Pod Metrics (2/3 width) */}
         <div className="xl:col-span-2">
-          <PodMetrics workload={mockWorkload} />
+          <PodMetrics workload={workload} />
         </div>
 
         {/* Right Column - High Priority Queue (1/3 width) */}
@@ -110,7 +191,7 @@ const Index = () => {
             Recent warnings and errors
           </p>
         </div>
-        <AlertsTicker alerts={mockAlerts} />
+        <AlertsTicker alerts={alerts} />
       </div>
     </MainLayout>
   );

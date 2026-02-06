@@ -1,24 +1,78 @@
-import { Zap, DollarSign, AlertTriangle, TrendingUp } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Zap, DollarSign, AlertTriangle, TrendingUp, Loader2 } from 'lucide-react';
 import { MainLayout } from '@/components/layouts/MainLayout';
 import { StatCard } from '@/components/StatCard';
 import { LLMUsageChart } from '@/components/LLMUsageChart';
 import { LLMModelCard } from '@/components/LLMModelCard';
-import { mockLLMModels, mockTokenHistory } from '@/data/mockData';
+import { api } from '@/services/api';
+import type { LLMModel } from '@/types';
 
 const LLMPage = () => {
+  const [llmModels, setLlmModels] = useState<LLMModel[]>([]);
+  const [loading, setLoading] = useState(true);
+  // Simulating history locally for the session since backend doesn't provide time-series yet
+  const [tokenHistory, setTokenHistory] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const snapshot = await api.getLatestSnapshot();
+      if (snapshot && snapshot.litellm) {
+        setLlmModels(snapshot.litellm);
+      }
+      setLoading(false);
+    };
+
+    fetchData();
+
+    const subscription = api.subscribeToSnapshots((snapshot) => {
+      if (snapshot && snapshot.litellm) {
+        setLlmModels(snapshot.litellm);
+
+        // Add new data point to history
+        const now = new Date();
+        const timeLabel = `${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+        const newPoint: any = { time: timeLabel };
+        snapshot.litellm.forEach(m => {
+          newPoint[m.provider] = (newPoint[m.provider] || 0) + m.tpm;
+        });
+
+        setTokenHistory(prev => {
+          const newHistory = [...prev, newPoint];
+          if (newHistory.length > 20) return newHistory.slice(-20); // Keep last 20 points
+          return newHistory;
+        });
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
   // Calculate aggregate stats
-  const totalTokens = mockLLMModels.reduce((sum, m) => sum + m.tpm, 0);
-  const totalCredits = mockLLMModels.reduce((sum, m) => sum + (m.credits || 0), 0);
-  
+  const totalTokens = llmModels.reduce((sum, m) => sum + m.tpm, 0);
+  const totalCredits = llmModels.reduce((sum, m) => sum + (m.credits || 0), 0);
+
   // Estimate daily cost based on average token usage
-  const estimatedDailyCost = mockLLMModels.reduce((sum, m) => {
+  const estimatedDailyCost = llmModels.reduce((sum, m) => {
     const inputCost = (m.cost_per_1k_input || 0) * (m.tpm / 1000) * 60 * 24 * 0.3; // 30% input
     const outputCost = (m.cost_per_1k_output || 0) * (m.tpm / 1000) * 60 * 24 * 0.7; // 70% output
     return sum + inputCost + outputCost;
   }, 0);
 
   // Calculate throttled requests (models at >80% RPM)
-  const throttledModels = mockLLMModels.filter(m => (m.rpm / m.rpm_max) > 0.8).length;
+  const throttledModels = llmModels.filter(m => (m.rpm / m.rpm_max) > 0.8).length;
+
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="flex h-[80vh] items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-lavender" />
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
@@ -33,7 +87,7 @@ const LLMPage = () => {
               LLM Nexus
             </h1>
             <p className="text-sm text-muted-deep">
-              Cost and rate limit monitoring for {mockLLMModels.length} models
+              Cost and rate limit monitoring for {llmModels.length} models
             </p>
           </div>
         </div>
@@ -73,7 +127,7 @@ const LLMPage = () => {
 
       {/* Token Usage Chart */}
       <div className="mb-8">
-        <LLMUsageChart data={mockTokenHistory} />
+        <LLMUsageChart data={tokenHistory.length > 0 ? tokenHistory : [{ time: 'Now', openai: 0, anthropic: 0, google: 0 }]} />
       </div>
 
       {/* Model Cards Grid */}
@@ -82,7 +136,7 @@ const LLMPage = () => {
         <p className="text-xs text-muted-deep">Real-time usage per model</p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {mockLLMModels.map((model) => (
+        {llmModels.map((model) => (
           <LLMModelCard key={model.model} model={model} />
         ))}
       </div>

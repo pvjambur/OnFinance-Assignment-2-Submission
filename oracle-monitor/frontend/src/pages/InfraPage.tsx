@@ -1,14 +1,63 @@
-import { Server } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Server, Loader2 } from 'lucide-react';
 import { MainLayout } from '@/components/layouts/MainLayout';
 import { PodMetrics } from '@/components/PodMetrics';
 import { PodTable } from '@/components/PodTable';
 import { LogsConsole } from '@/components/LogsConsole';
-import { mockWorkload, mockLogs } from '@/data/mockData';
+import { api } from '@/services/api';
+import type { Workload, LogEntry } from '@/types';
 
 const InfraPage = () => {
-  const totalPods = mockWorkload.reduce((sum, w) => sum + w.pods.length, 0);
-  const runningPods = mockWorkload.flatMap(w => w.pods).filter(p => p.status === 'Running').length;
-  const failedPods = mockWorkload.flatMap(w => w.pods).filter(p => p.status === 'Failed').length;
+  const [workload, setWorkload] = useState<Workload[]>([]);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      // Fetch initial data
+      const [snapshot, fetchedLogs] = await Promise.all([
+        api.getLatestSnapshot(),
+        api.getLogs()
+      ]);
+
+      if (snapshot && snapshot.workload) {
+        setWorkload(snapshot.workload);
+      }
+      if (fetchedLogs) {
+        setLogs(fetchedLogs);
+      }
+      setLoading(false);
+    };
+
+    fetchData();
+
+    // Subscribe to updates
+    const subscription = api.subscribeToSnapshots((snapshot) => {
+      if (snapshot && snapshot.workload) {
+        setWorkload(snapshot.workload);
+      }
+      // Also refresh logs when new snapshots arrive (or separate logic for logs)
+      api.getLogs().then(setLogs);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const totalPods = workload.reduce((sum, w) => sum + w.pods.length, 0);
+  const runningPods = workload.flatMap(w => w.pods).filter(p => p.status === 'Running').length;
+  const failedPods = workload.flatMap(w => w.pods).filter(p => p.status === 'Failed').length;
+
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="flex h-[80vh] items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-accent" />
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
@@ -32,7 +81,7 @@ const InfraPage = () => {
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         <div className="bg-card rounded-xl p-4 border border-border">
-          <div className="text-2xl font-bold text-foreground">{mockWorkload.length}</div>
+          <div className="text-2xl font-bold text-foreground">{workload.length}</div>
           <div className="text-xs text-muted-deep">Deployments</div>
         </div>
         <div className="bg-card rounded-xl p-4 border border-border">
@@ -51,17 +100,17 @@ const InfraPage = () => {
 
       {/* Pod Metrics Chart - Expanded */}
       <div className="mb-8">
-        <PodMetrics workload={mockWorkload} />
+        <PodMetrics workload={workload} />
       </div>
 
       {/* Pod Status Table */}
       <div className="mb-8">
-        <PodTable workload={mockWorkload} />
+        <PodTable workload={workload} />
       </div>
 
       {/* Logs Console */}
       <div>
-        <LogsConsole logs={mockLogs} maxHeight="max-h-80" />
+        <LogsConsole logs={logs} maxHeight="max-h-80" />
       </div>
     </MainLayout>
   );

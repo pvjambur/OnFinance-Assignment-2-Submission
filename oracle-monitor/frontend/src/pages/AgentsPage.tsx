@@ -1,24 +1,49 @@
-import { useState, useMemo } from 'react';
-import { Cpu } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { Cpu, Loader2 } from 'lucide-react';
 import { MainLayout } from '@/components/layouts/MainLayout';
 import { AgentList } from '@/components/AgentList';
 import { FilterBar } from '@/components/FilterBar';
 import { AgentDetailModal } from '@/components/AgentDetailModal';
-import { mockAgents } from '@/data/mockData';
+import { api } from '@/services/api';
 import type { Agent } from '@/types';
 
 const AgentsPage = () => {
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchValue, setSearchValue] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [modelFilter, setModelFilter] = useState('all');
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
 
+  // Fetch data on mount and subscribe to updates
+  useEffect(() => {
+    const fetchData = async () => {
+      const snapshot = await api.getLatestSnapshot();
+      if (snapshot && snapshot.agents) {
+        setAgents(snapshot.agents);
+      }
+      setLoading(false);
+    };
+
+    fetchData();
+
+    const subscription = api.subscribeToSnapshots((snapshot) => {
+      if (snapshot && snapshot.agents) {
+        setAgents(snapshot.agents);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
   // Get unique models from all agents
   const uniqueModels = useMemo(() => {
     const models = new Set<string>();
-    mockAgents.forEach(agent => agent.models.forEach(m => models.add(m)));
+    agents.forEach(agent => agent.models.forEach(m => models.add(m)));
     return Array.from(models);
-  }, []);
+  }, [agents]);
 
   const statusOptions = [
     { value: 'all', label: 'All' },
@@ -32,7 +57,7 @@ const AgentsPage = () => {
   ];
 
   const filteredAgents = useMemo(() => {
-    return mockAgents.filter(agent => {
+    return agents.filter(agent => {
       // Search filter
       if (searchValue) {
         const search = searchValue.toLowerCase();
@@ -55,9 +80,19 @@ const AgentsPage = () => {
 
       return true;
     });
-  }, [searchValue, statusFilter, modelFilter]);
+  }, [agents, searchValue, statusFilter, modelFilter]);
 
-  const activeCount = mockAgents.filter(a => a.activity.active_task_ids.length > 0).length;
+  const activeCount = agents.filter(a => a.activity.active_task_ids.length > 0).length;
+
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="flex h-[80vh] items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
@@ -72,7 +107,7 @@ const AgentsPage = () => {
               Agent Observatory
             </h1>
             <p className="text-sm text-muted-deep">
-              {mockAgents.length} agents configured • {activeCount} currently active
+              {agents.length} agents configured • {activeCount} currently active
             </p>
           </div>
         </div>
@@ -95,7 +130,7 @@ const AgentsPage = () => {
       {/* Results Info */}
       <div className="mb-4 flex items-center justify-between">
         <span className="text-sm text-muted-deep">
-          Showing {filteredAgents.length} of {mockAgents.length} agents
+          Showing {filteredAgents.length} of {agents.length} agents
         </span>
         {(searchValue || statusFilter !== 'all' || modelFilter !== 'all') && (
           <button
@@ -117,7 +152,7 @@ const AgentsPage = () => {
         const card = target.closest('[data-agent-card]');
         if (card) {
           const agentName = card.getAttribute('data-agent-card');
-          const agent = mockAgents.find(a => a.name === agentName);
+          const agent = agents.find(a => a.name === agentName);
           if (agent) setSelectedAgent(agent);
         }
       }}>
