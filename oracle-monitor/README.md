@@ -1,75 +1,179 @@
-# Oracle Monitor
+# 🔮 Oracle Monitor
 
-Oracle Monitor is a unified observability system for multi-agent systems. It aggregates state from Kubernetes, queues, LLM providers, and agents into a single JSON snapshot, enabling "God Mode" debugging.
+![License](https://img.shields.io/badge/license-MIT-blue.svg) ![Python](https://img.shields.io/badge/python-3.11+-blue.svg) ![Kubernetes](https://img.shields.io/badge/kubernetes-1.25+-blue.svg) ![React](https://img.shields.io/badge/react-18-blue.svg)
 
-## 🚀 Quick Start
-> **[CLICK HERE FOR RUN INSTRUCTIONS](./RUN_INSTRUCTIONS.md)**  
-> Follow the simplified guide to get up and running in 5 minutes.
+**Oracle Monitor** is a unified observability platform designed for **Multi-Agent Systems**. It aggregates state from Kubernetes, distributed message queues, LLM providers, and autonomous agents into a single, comprehensive **"God Mode"** snapshot.
 
-## Prerequisites
+By consolidating telemetry from across the stack, it allows developers and AI agents to debug complex interactions, visualize system health, and time-travel through system states.
 
-To run this system locally, you need the following installed:
+---
 
-### 1. Core Runtime (Essential)
-- **Docker Desktop** (or Docker Engine + Compose): For running the database, message queue, and API.
-- **Python 3.11+**: For running the collectors, CLI, and example agents.
+## 🏗️ System Architecture
 
-### 2. Infrastructure Tools
-- **Kubernetes (Minikube)**: We use Minikube to simulate the production agent environment locally.
-    - [Install Minikube](https://minikube.sigs.k8s.io/docs/start/)
-- **kubectl**: CLI tool to interact with Kubernetes.
-    - [Install kubectl](https://kubernetes.io/docs/tasks/tools/)
+The following diagram illustrates the complete infrastructure topology, showing how **Pods** inside the **Kubernetes Cluster** interact with external services and the message bus.
 
-### 3. Database (Choose One)
-- **Supabase Cloud Account**: Simplest option. Create a free project at [supabase.com](https://supabase.com).
-- **OR Supabase CLI**: For running self-hosted Supabase locally.
-    - [Install CLI](https://supabase.com/docs/guides/cli) (`brew install supabase/tap/supabase` or Windows equivalent).
+```mermaid
+graph TD
+    user((👤 User))
+    
+    subgraph "☁️ External Services"
+        OpenAI[OpenAI / Anthropic]
+        Supabase[(Supabase DB)]
+    end
 
-### 4. Optional but Recommended
-- **Redpanda CLI (`rpk`)**: Useful for inspecting the Kafka queue manually, though `docker-compose` runs the server for you.
-- **k9s**: Excellent TUI for viewing Kubernetes pods.
+    subgraph "🖥️ Frontend"
+        Dashboard[React Dashboard]
+    end
 
-## What is Stored?
+    subgraph "☸️ Kubernetes Cluster (Minikube)"
+        subgraph "Namespace: oracle-monitor"
+            
+            subgraph "🧠 Agent Layer"
+                ResearchPod[Research Agent Pod]
+                WriterPod[Writer Agent Pod]
+                AnalysisPod[Analysis Agent Pod]
+            end
 
-The system stores data in **Supabase (PostgreSQL)**.
+            subgraph "📨 Message Bus"
+                Kafka[Redpanda / Kafka Service]
+            end
 
-1.  **`system_snapshots` Table**:
-    - Stores the JSON "God Mode" snapshot every 10 seconds.
-    - Contains: combined state of all Agents, K8s Pods, Kafka Queues, and LiteLLM usage.
-    - Useful for: Time-travel debugging ("Show me the system state 5 minutes ago").
+            subgraph "📡 Observability Layer"
+                K8sCol[K8s Collector Pod]
+                KafkaCol[Kafka Collector Pod]
+                LLMCol[LLM Collector Pod]
+                Aggregator[State Aggregator Pod]
+            end
+            
+        end
+    end
 
-2.  **`agent_traces` Table** (if enabled):
-    - Detailed logs of individual agent actions.
+    %% Flows
+    user -->|View| Dashboard
+    Dashboard <-->|Real-time Sync| Supabase
+    
+    ResearchPod -->|Task Events| Kafka
+    WriterPod -->|Task Events| Kafka
+    
+    ResearchPod <-->|API Calls| OpenAI
+    
+    %% Collection
+    K8sCol -.->|Watch CLI| ResearchPod
+    K8sCol -.->|Watch CLI| WriterPod
+    
+    KafkaCol -.->|Consume| Kafka
+    LLMCol -.->|Intercept| OpenAI
 
-3.  **`alerts` Table**:
-    - System anomalies detected by the aggregator.
+    %% Aggregation
+    K8sCol -->|Metrics| Aggregator
+    KafkaCol -->|Metrics| Aggregator
+    LLMCol -->|Metrics| Aggregator
+    
+    Aggregator -->|JSON Snapshot| Supabase
+```
 
-## "Claude Code" Integration
+---
 
-You asked about "Claude Code". You do **not** need to install Claude Code to run this system.
+## 🧩 Components
 
-"Claude Code" refers to the AI Agent (like the one you are talking to right now, or the `claude` CLI tool) that **uses** Oracle Monitor.
+### 1. **🧠 Autonomous Agents**
+Python-based microservices that perform actual work.
+*   **Research Agent**: Browses the web to gather information.
+*   **Writer Agent**: Synthesizes information into reports.
+*   *Telemetry*: They report internal thoughts, tool usage, and task status to Kafka.
 
-**How it works:**
-1.  You run `oracle-monitor` outputting JSON.
-2.  You paste that JSON to the AI (or the AI runs the CLI directly).
-3.  The AI analyzes the JSON to find bugs across your stack (K8s + Python + LLM).
+### 2. **📡 Collectors**
+Specialized services that "watch" the system without interfering.
+*   **K8s Collector**: Monitors Pod health, restarts, and resource usage (CPU/RAM).
+*   **Kafka Collector**: Observes queue depth, message latency, and dead letter queues.
+*   **LLM Collector**: Tracks token consumption, costs, and rate limits.
 
-## Quick Start
+### 3. **⚡ Aggregator**
+The core engine. It combines partial states from all collectors into a unified `SystemSnapshot`. It handles detailed JSON schema validation to ensure data consistency.
 
-1.  **Setup Infrastructure**:
-    ```bash
-    ./scripts/setup_local_k8s.sh
-    ```
-2.  **Install Python Deps**:
-    ```bash
-    make setup
-    ```
-3.  **Run Collectors**:
-    ```bash
-    ./scripts/deploy_collectors.sh
-    ```
-4.  **Use CLI**:
-    ```bash
-    oracle-monitor latest
-    ```
+### 4. **💾 Supabase (Persistence)**
+Acts as the "Black Box" recorder.
+*   **`system_snapshots`**: Stores the full state of the universe every few seconds.
+*   **Real-time Engine**: Pushes updates to the UI instantly.
+
+### 5. **🖥️ Glassmorphism Dashboard**
+A modern React UI that visualizes the "God Mode" snapshot.
+*   **Live Charts**: Token usage and queuing latency.
+*   **Agent Grid**: Real-time status of what every agent is thinking.
+*   **Alert Ticker**: Instant notifications of system anomalies.
+
+---
+
+## 📂 Project Structure
+
+```text
+oracle-monitor/
+├── 🤖 agents/                 # Autonomous agent implementations
+│   ├── base/               # Abstract base agent class (SDK)
+│   ├── research_agent/     # Web research specialist
+│   └── writer_agent/       # Content generation specialist
+├── 🔌 api/                    # FastAPI backend service
+├── 📡 collectors/             # Data ingestion services
+│   ├── k8s_collector/      # Kubernetes metrics
+│   └── kafka_collector/    # Message bus monitoring
+├── 🎨 frontend/               # React + Vite Dashboard
+│   ├── src/features/       # Feature-based UI components (Agents, Infra)
+│   └── src/services/       # Supabase API integration
+├── 🏗️ infrastructure/         # Deployment configurations
+│   ├── kubernetes/         # K8s YAML manifests
+│   └── kafka/              # Redpanda/Kafka setup
+└── 📜 schema/                 # JSON Schemas for strict type validation
+```
+
+---
+
+## 🚀 How It Works
+
+1.  **Ingestion**: Agents execute tasks and emit logs. Collectors watch the infrastructure.
+2.  **Aggregation**: The **Aggregator** service reads these streams and builds a JSON object conforming to `oracle_state.schema.json`.
+3.  **Broadcast**: The snapshot is saved to Supabase.
+4.  **visualization**: The Dashboard receives the `INSERT` event via WebSocket and updates the UI.
+
+---
+
+## 🏁 Getting Started
+
+### Prerequisites
+*   **Docker Desktop** (for Minikube)
+*   **Python 3.11+**
+*   **Node.js & npm**
+*   **Supabase Account**
+
+### ⚡ Quick Run Guide
+
+For the complete, step-by-step tutorial, see **[👉 RUN_INSTRUCTIONS.md](./RUN_INSTRUCTIONS.md)**.
+
+**1. Infrastructure**
+```powershell
+minikube start --driver=docker
+minikube kubectl -- apply -f infrastructure/kubernetes/secrets/api-keys-secret.yaml
+```
+
+**2. Deploy System**
+```powershell
+minikube image build -t oracle-monitor-agent:latest -f agents/Dockerfile.agent .
+minikube kubectl -- apply -f infrastructure/kubernetes/deployments/
+```
+
+**3. Start Dashboard**
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+---
+*Built with ❤️ using Python, FastAPI, React, Kubernetes, and Supabase.*
+
+<br />
+
+---
+
+### **Pranav V Jambur**
+**R. V. College of Engineering**
+pranavvjambur.cs23@rvce.edu.in
