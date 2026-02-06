@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: research-agent-deployment
+  namespace: oracle-monitor
+  labels:
+    app: research-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: research-agent
+  template:
+    metadata:
+      labels:
+        app: research-agent
+    spec:
+      containers:
+      - name: research-agent
+        image: oracle-monitor-agent:latest
+        command: ["python", "-m", "agents.research_agent.main"]
+        envFrom:
+        - configMapRef:
+            name: agent-config
+        - secretRef:
+            name: api-keys-secret
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "250m"
+          limits:
+            memory: "128Mi"
+            cpu: "500m"

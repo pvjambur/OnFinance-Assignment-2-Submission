@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: k8s-collector-deployment
+  namespace: oracle-monitor
+  labels:
+    app: k8s-collector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: k8s-collector
+  template:
+    metadata:
+      labels:
+        app: k8s-collector
+    spec:
+      containers:
+      - name: k8s-collector
+        image: oracle-monitor-agent:latest
+        imagePullPolicy: Never
+        command: ["python", "-m", "collectors.main"]
+        envFrom:
+        - configMapRef:
+            name: agent-config
+        env:
+        - name: SUPABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: agent-config
+              key: SUPABASE_URL
+        - name: SUPABASE_SERVICE_ROLE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: api-keys-secret
+              key: SUPABASE_SERVICE_ROLE_KEY
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          limits:
+            memory: "128Mi"
+            cpu: "250m"

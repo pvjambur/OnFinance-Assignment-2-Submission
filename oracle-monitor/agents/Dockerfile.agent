@@ -6,6 +6,8 @@ COPY agents/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY agents/ /app/agents/
+COPY collectors/ /app/collectors/
+COPY schema/ /app/schema/
 
 ENV PYTHONPATH=/app
 

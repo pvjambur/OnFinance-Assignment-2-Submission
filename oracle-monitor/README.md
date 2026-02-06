@@ -2,6 +2,10 @@
 
 Oracle Monitor is a unified observability system for multi-agent systems. It aggregates state from Kubernetes, queues, LLM providers, and agents into a single JSON snapshot, enabling "God Mode" debugging.
 
+## 🚀 Quick Start
+> **[CLICK HERE FOR RUN INSTRUCTIONS](./RUN_INSTRUCTIONS.md)**  
+> Follow the simplified guide to get up and running in 5 minutes.
+
 ## Prerequisites
 
 To run this system locally, you need the following installed:

@@ -1,24 +1,33 @@
-import json
 import jsonschema
-from typing import Dict, Any
+import json
 import os
 
-class Validator:
-    def __init__(self, schema_path: str):
-        self.schema_path = schema_path
-        self.schema = self._load_schema()
+# Load schema once at module import
+SCHEMA_PATH = os.path.join(
+    os.path.dirname(__file__), 
+    '../../schema/oracle_state.schema.json'
+)
 
-    def _load_schema(self) -> Dict[str, Any]:
-        if not os.path.exists(self.schema_path):
-            raise FileNotFoundError(f"Schema not found at {self.schema_path}")
+# Resolve relative path to absolute to avoid issues
+SCHEMA_PATH = os.path.abspath(SCHEMA_PATH)
+
+try:
+    with open(SCHEMA_PATH, 'r') as f:
+        SCHEMA = json.load(f)
+except FileNotFoundError:
+    print(f"WARNING: Schema file not found at {SCHEMA_PATH}")
+    SCHEMA = {}
+
+def validate_state(state):
+    """Validate state against Oracle schema"""
+    if not SCHEMA:
+        print("Schema not loaded, skipping validation.")
+        return False
         
-        with open(self.schema_path, 'r') as f:
-            return json.load(f)
-
-    def validate(self, data: Dict[str, Any]) -> bool:
-        try:
-            jsonschema.validate(instance=data, schema=self.schema)
-            return True
-        except jsonschema.exceptions.ValidationError as e:
-            print(f"Validation Error: {e.message}")
-            return False
+    try:
+        jsonschema.validate(instance=state, schema=SCHEMA)
+        return True
+    except jsonschema.ValidationError as e:
+        print(f"❌ Validation failed: {e.message}")
+        print(f"   Path: {' -> '.join(str(p) for p in e.path)}")
+        return False

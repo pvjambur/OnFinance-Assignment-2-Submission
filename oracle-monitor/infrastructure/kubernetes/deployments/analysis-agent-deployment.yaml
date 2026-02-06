@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: analysis-agent-deployment
+  namespace: oracle-monitor
+  labels:
+    app: analysis-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: analysis-agent
+  template:
+    metadata:
+      labels:
+        app: analysis-agent
+    spec:
+      containers:
+      - name: analysis-agent
+        image: oracle-monitor-agent:latest
+        command: ["python", "-m", "agents.analysis_agent.main"]
+        envFrom:
+        - configMapRef:
+            name: agent-config
+        - secretRef:
+            name: api-keys-secret
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "500m"
+          limits:
+            memory: "256Mi"
+            cpu: "1000m"

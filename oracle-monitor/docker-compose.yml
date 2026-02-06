@@ -5,17 +5,8 @@ services:
   # For simplicity in this demo, we use a standard Postgres with some Supabase extensions if needed,
   # but sticking to standard Postgres for the 'snapshot' storage is usually fine for a prototype.
   # However, to match the "Supabase" requirement more closely, we'd ideally use the supabase/postgres image.
-  
-  postgres:
-    image: postgres:15
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: postgres
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+
+
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.3.0
