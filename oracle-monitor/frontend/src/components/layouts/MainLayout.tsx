@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import { Sidebar } from '@/components/Sidebar';
+import ChatWidget from '@/components/ChatWidget';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -14,6 +15,7 @@ export function MainLayout({ children }: MainLayoutProps) {
           {children}
         </div>
       </main>
+      <ChatWidget />
     </div>
   );
 }

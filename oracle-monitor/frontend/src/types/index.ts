@@ -100,3 +100,8 @@ export interface LogEntry {
   message: string;
   source: string;
 }
+
+export interface ChatResponse {
+  reply: string;
+  context_used: boolean;
+}

@@ -53,5 +53,29 @@ export const api = {
         }
 
         return data as LogEntry[];
+    },
+
+    /**
+     * Send a query to the AI Oracle Chatbot
+     */
+    async queryChatbot(message: string): Promise<{ reply: string, context_used: boolean } | null> {
+        try {
+            const response = await fetch('http://localhost:8000/chat/query', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ message }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`API Error: ${response.statusText}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Error querying chatbot:', error);
+            return null;
+        }
     }
 };

@@ -1,4 +1,4 @@
-import { Activity, LayoutDashboard, Server, Cpu, Database, Zap } from 'lucide-react';
+import { Activity, LayoutDashboard, Server, Cpu, Database, Zap, FileText } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
@@ -19,6 +19,7 @@ export function Sidebar({ connected = true }: SidebarProps) {
     { icon: <Server size={18} />, label: 'Infrastructure', href: '/infra' },
     { icon: <Database size={18} />, label: 'Message Queues', href: '/queues' },
     { icon: <Zap size={18} />, label: 'LLM Nexus', href: '/llm' },
+    { icon: <FileText size={18} />, label: 'Summary & Logs', href: '/summary' },
   ];
 
   return (
@@ -48,8 +49,8 @@ export function Sidebar({ connected = true }: SidebarProps) {
             className={({ isActive }) =>
               cn(
                 "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 border",
-                isActive 
-                  ? "bg-gradient-to-r from-primary/15 to-secondary/10 text-primary border-primary/20 shadow-[0_0_20px_-5px_hsl(var(--primary)/0.3)]" 
+                isActive
+                  ? "bg-gradient-to-r from-primary/15 to-secondary/10 text-primary border-primary/20 shadow-[0_0_20px_-5px_hsl(var(--primary)/0.3)]"
                   : "text-muted border-transparent hover:bg-foreground/5 hover:text-foreground"
               )
             }
