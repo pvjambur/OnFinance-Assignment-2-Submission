@@ -1,0 +1,29 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "LiteLLM State",
+    "type": "object",
+    "required": [
+        "model",
+        "rpm",
+        "rpm_max",
+        "tpm",
+        "tpm_max"
+    ],
+    "properties": {
+        "model": {
+            "type": "string"
+        },
+        "rpm": {
+            "type": "integer"
+        },
+        "rpm_max": {
+            "type": "integer"
+        },
+        "tpm": {
+            "type": "integer"
+        },
+        "tpm_max": {
+            "type": "integer"
+        }
+    }
+}

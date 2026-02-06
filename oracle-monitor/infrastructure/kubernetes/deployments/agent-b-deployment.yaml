@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent-b-deployment
+  namespace: oracle-monitor
+  labels:
+    app: agent-b
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: agent-b
+  template:
+    metadata:
+      labels:
+        app: agent-b
+    spec:
+      containers:
+      - name: agent-b
+        image: oracle-monitor-agent:latest
+        command: ["python", "-m", "agents.agent_b.main"]
+        envFrom:
+        - configMapRef:
+            name: agent-config
+        - secretRef:
+            name: api-keys-secret
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "500m"
+          limits:
+            memory: "256Mi"
+            cpu: "1000m"

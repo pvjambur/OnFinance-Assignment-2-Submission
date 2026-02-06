@@ -1,0 +1,52 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Agent State",
+    "type": "object",
+    "required": [
+        "name",
+        "deployment_name",
+        "activity"
+    ],
+    "properties": {
+        "name": {
+            "type": "string"
+        },
+        "deployment_name": {
+            "type": "string"
+        },
+        "activity": {
+            "type": "object",
+            "required": [
+                "active_task_ids"
+            ],
+            "properties": {
+                "active_task_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "required": [
+                            "id",
+                            "status",
+                            "started_on"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "status": {
+                                "type": "string"
+                            },
+                            "started_on": {
+                                "type": "string",
+                                "format": "date-time"
+                            },
+                            "waiting_since_mins": {
+                                "type": "number"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

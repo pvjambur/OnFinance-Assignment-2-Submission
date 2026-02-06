@@ -1,0 +1,45 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Queue State",
+    "type": "object",
+    "required": [
+        "name",
+        "tasks"
+    ],
+    "properties": {
+        "name": {
+            "type": "string"
+        },
+        "tasks": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": [
+                    "id"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "priority": {
+                        "type": "object",
+                        "properties": {
+                            "level": {
+                                "type": "string"
+                            },
+                            "waiting_since_mins": {
+                                "type": "number"
+                            }
+                        }
+                    },
+                    "invoked_by": {
+                        "type": "string"
+                    },
+                    "waiting_since_mins": {
+                        "type": "number"
+                    }
+                }
+            }
+        }
+    }
+}

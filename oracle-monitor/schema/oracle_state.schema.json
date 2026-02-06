@@ -1,0 +1,34 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Oracle System State",
+  "description": "A comprehensive snapshot of the multi-agent system state at a point in time",
+  "type": "object",
+  "required": ["id", "timestamp", "agents", "workload", "queues", "litellm"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for this snapshot"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of when the snapshot was taken"
+    },
+    "agents": {
+      "type": "array",
+      "items": { "$ref": "agent.schema.json" }
+    },
+    "workload": {
+      "type": "array",
+      "items": { "$ref": "workload.schema.json" }
+    },
+    "queues": {
+      "type": "array",
+      "items": { "$ref": "queue.schema.json" }
+    },
+    "litellm": {
+      "type": "array",
+      "items": { "$ref": "litellm.schema.json" }
+    }
+  }
+}
