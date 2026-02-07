@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Cpu, Server, Radio, Zap, Activity, Loader2 } from 'lucide-react';
+import { Cpu, Server, Radio, Zap, Activity, Loader2, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { MainLayout } from '@/components/layouts/MainLayout';
 import { StatCard } from '@/components/StatCard';
 import { PodMetrics } from '@/components/PodMetrics';
 import { QueuePanel } from '@/components/QueuePanel';
 import { AlertsTicker } from '@/components/AlertsTicker';
+import { LogsConsole } from '@/components/LogsConsole';
 import { api } from '@/services/api';
-import type { Agent, Workload, Queue, LLMModel, Alert } from '@/types';
+import type { Agent, Workload, Queue, LLMModel, Alert, LogEntry } from '@/types';
 
 const Index = () => {
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -14,7 +16,10 @@ const Index = () => {
   const [queues, setQueues] = useState<Queue[]>([]);
   const [llmModels, setLlmModels] = useState<LLMModel[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isInitiating, setIsInitiating] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -28,9 +33,11 @@ const Index = () => {
         setWorkload(snapshot.workload || []);
         setQueues(snapshot.queues || []);
         setLlmModels(snapshot.litellm || []);
+        setLastUpdated(new Date(snapshot.timestamp));
       }
 
       if (logs) {
+        setLogs(logs);
         // Convert logs to alerts (filter for warnings/errors)
         const newAlerts: Alert[] = logs
           .filter(l => l.level === 'warning' || l.level === 'error')
@@ -56,9 +63,11 @@ const Index = () => {
         setWorkload(snapshot.workload || []);
         setQueues(snapshot.queues || []);
         setLlmModels(snapshot.litellm || []);
+        setLastUpdated(new Date(snapshot.timestamp));
       }
       // Refresh logs/alerts on new snapshot
       api.getLogs(50).then(logs => {
+        setLogs(logs);
         const newAlerts: Alert[] = logs
           .filter(l => l.level === 'warning' || l.level === 'error')
           .map(l => ({
@@ -94,6 +103,16 @@ const Index = () => {
   const runningPods = workload.flatMap(w => w.pods).filter(p => p.status === 'Running').length;
   const clusterHealth = totalPods > 0 ? Math.round((runningPods / totalPods) * 100) : 100;
 
+  const handleInitiateTask = async () => {
+    setIsInitiating(true);
+    const result = await api.createTask("Scan system for optimizations", "high");
+    if (result) {
+      console.log("Task initiated:", result);
+      // Optional: Show toast
+    }
+    setIsInitiating(false);
+  };
+
   if (loading) {
     return (
       <MainLayout>
@@ -107,8 +126,8 @@ const Index = () => {
   return (
     <MainLayout>
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
+      <div className="mb-8 flex items-center justify-between">
+        <div className="flex items-center gap-3">
           <div className="p-2 bg-primary/10 rounded-lg border border-primary/20">
             <Activity size={20} className="text-primary" />
           </div>
@@ -116,11 +135,20 @@ const Index = () => {
             <h1 className="text-2xl font-bold text-foreground">
               Mission Control
             </h1>
-            <p className="text-sm text-muted-deep">
-              Real-time system health overview
+            <p className="text-sm text-muted-deep line-clamp-1">
+              {lastUpdated ? `Last state sync: ${lastUpdated.toLocaleTimeString()}` : 'Connecting to Oracle...'}
             </p>
           </div>
         </div>
+
+        <button
+          onClick={handleInitiateTask}
+          disabled={isInitiating}
+          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-xl font-bold hover:opacity-90 transition-all disabled:opacity-50"
+        >
+          {isInitiating ? <Loader2 size={18} className="animate-spin" /> : <Zap size={18} />}
+          Initiate Task
+        </button>
       </div>
 
       {/* Stats Grid - Top Row */}
@@ -192,6 +220,26 @@ const Index = () => {
           </p>
         </div>
         <AlertsTicker alerts={alerts} />
+      </div>
+
+      {/* Logs Console */}
+      <div className="mt-8 mb-12">
+        <div className="mb-4">
+          <h2 className="text-lg font-bold text-foreground mb-1">
+            Real-time Output
+          </h2>
+          <p className="text-xs text-muted-deep">
+            Live execution stream from Kubernetes collectors
+          </p>
+        </div>
+        <LogsConsole
+          logs={logs}
+          onTaskClick={(taskId) => {
+            console.log("Telemetry Action: Trace Task", taskId);
+            // In a real app, this would open a Task Trace View
+            alert(`Tracing Telemetry for Task ID: ${taskId}\n\nThis feature allows you to see the exact K8s pod and Agent that handled this request.`);
+          }}
+        />
       </div>
     </MainLayout>
   );

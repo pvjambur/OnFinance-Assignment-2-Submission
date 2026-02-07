@@ -8,6 +8,11 @@
       "type": "string",
       "description": "Unique identifier for the system instance"
     },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Snapshot creation timestamp"
+    },
     "agents": {
       "type": "array",
       "description": "List of registered agents in the system",
@@ -351,6 +356,7 @@
     "agents",
     "workload",
     "queues",
-    "litellm"
+    "litellm",
+    "timestamp"
   ]
 }

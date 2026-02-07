@@ -99,6 +99,7 @@ export interface LogEntry {
   level: 'debug' | 'info' | 'warning' | 'error';
   message: string;
   source: string;
+  taskId?: string;
 }
 
 export interface ChatResponse {

@@ -34,7 +34,7 @@ def main():
     # Path to schema
     schema_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "schema", "oracle_state.schema.json")
     
-    builder = StateBuilder(schema_path)
+    builder = StateBuilder()
     
     while True:
         try:

@@ -4,6 +4,8 @@ import os
 import logging
 import json
 import threading
+from typing import Optional
+from datetime import datetime, timezone
 from abc import ABC, abstractmethod
 from kafka import KafkaConsumer, KafkaProducer
 from kafka.errors import KafkaError
@@ -111,11 +113,17 @@ class BaseAgent(ABC):
                 except:
                     pass
 
-    def publish_log(self, message: str):
+    def publish_log(self, message: str, level: str = "info", task_id: Optional[str] = None):
         # SAFETY CHECK: Only try to send if producer exists
         if self.producer is not None:
             try:
-                log_entry = { ... } # your log data
+                log_entry = {
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "level": level,
+                    "message": message,
+                    "source": self.name,
+                    "task_id": task_id
+                }
                 self.producer.send(self.log_topic, log_entry)
             except Exception as e:
                 logger.error(f"Failed to publish log: {e}")

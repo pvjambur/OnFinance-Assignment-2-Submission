@@ -18,6 +18,7 @@ spec:
       containers:
       - name: research-agent
         image: oracle-monitor-agent:latest
+        imagePullPolicy: Never
         command: ["python", "-m", "agents.research_agent.main"]
         envFrom:
         - configMapRef:

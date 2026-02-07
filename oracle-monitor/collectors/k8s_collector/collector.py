@@ -39,12 +39,20 @@ class K8sCollector(Collector):
                         "status": pod.status.phase,
                         "memory": 0, # Placeholder
                         "cpu": 0,    # Placeholder
-                        "restarts": sum(cs.restart_count for cs in pod.status.container_statuses) if pod.status.container_statuses else 0
+                        "restarts": sum(cs.restart_count for cs in pod.status.container_statuses) if pod.status.container_statuses else 0,
+                        "updated_at": "2024-01-01T00:00:00Z"
                     }
                     pod_list.append(pod_data)
                 
                 workload_state.append({
                     "deployment_name": dep_name,
+                    "max_pods": dep.spec.replicas or 1,
+                    "live": {
+                        "active_pods": len(pod_list),
+                        "updated_at": "2024-01-01T00:00:00Z", # Placeholder
+                        "image": dep.spec.template.spec.containers[0].image,
+                        "rolled_out_at": "2024-01-01T00:00:00Z" # Placeholder
+                    },
                     "pods": pod_list
                 })
                 

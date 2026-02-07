@@ -7,3 +7,4 @@ data:
   LOG_LEVEL: "INFO"
   KAFKA_BROKERS: "kafka:9092"
   APP_ENV: "production"
+  SUPABASE_URL: "https://avglpohuwizutgybnmgz.supabase.co"

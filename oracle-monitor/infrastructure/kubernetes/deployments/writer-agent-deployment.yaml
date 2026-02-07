@@ -18,6 +18,7 @@ spec:
       containers:
       - name: writer-agent
         image: oracle-monitor-agent:latest
+        imagePullPolicy: Never
         command: ["python", "-m", "agents.writer_agent.main"]
         envFrom:
         - configMapRef:

@@ -11,8 +11,12 @@ class ResearchAgent(BaseAgent):
         self.register()
         print(f"Agent {self.name} starting loop...")
         while self.running:
-            # Simulate work
-            print("Research Agent doing research...")
+            # Simulate real research telemetry
+            self.publish_log("Scanning system metrics for anomalies...", level="info")
+            time.sleep(2)
+            self.publish_log("Analyzing pod health across oracle-monitor namespace", level="info")
+            time.sleep(2)
+            self.publish_log("Potential resource bottleneck detected in queue sub-system", level="warning")
             time.sleep(5)
 
 if __name__ == "__main__":

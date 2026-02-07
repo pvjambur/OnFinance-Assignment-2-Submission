@@ -18,7 +18,7 @@ export const api = {
             return null;
         }
 
-        return data as SystemSnapshot;
+        return data.state as SystemSnapshot;
     },
 
     /**
@@ -31,7 +31,9 @@ export const api = {
                 'postgres_changes',
                 { event: 'INSERT', schema: 'public', table: 'system_snapshots' },
                 (payload) => {
-                    callback(payload.new as SystemSnapshot);
+                    if (payload.new && (payload.new as any).state) {
+                        callback((payload.new as any).state as SystemSnapshot);
+                    }
                 }
             )
             .subscribe();
@@ -52,7 +54,10 @@ export const api = {
             return [];
         }
 
-        return data as LogEntry[];
+        return (data as any[]).map(log => ({
+            ...log,
+            taskId: log.task_id
+        })) as LogEntry[];
     },
 
     /**
@@ -75,6 +80,34 @@ export const api = {
             return await response.json();
         } catch (error) {
             console.error('Error querying chatbot:', error);
+            return null;
+        }
+    },
+
+    /**
+     * Initiate a new task via the backend API
+     */
+    async createTask(description: string, priority: string = "medium"): Promise<{ status: string, task_id: string } | null> {
+        try {
+            const response = await fetch('http://localhost:8000/tasks/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    id: `task-${Math.random().toString(36).substr(2, 9)}`,
+                    description,
+                    priority
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`API Error: ${response.statusText}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Error creating task:', error);
             return null;
         }
     }

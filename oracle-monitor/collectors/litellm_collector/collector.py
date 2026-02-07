@@ -18,6 +18,7 @@ class LiteLLMCollector(Collector):
         return [
             {
                 "model": "gpt-4",
+                "provider": "openai",
                 "rpm": 10,
                 "rpm_max": 50,
                 "tpm": 5000,
@@ -25,6 +26,7 @@ class LiteLLMCollector(Collector):
             },
             {
                 "model": "gpt-3.5-turbo",
+                "provider": "openai",
                 "rpm": 100,
                 "rpm_max": 500,
                 "tpm": 20000,

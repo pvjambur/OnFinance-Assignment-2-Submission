@@ -23,9 +23,11 @@ class QueueCollector(Collector):
                         "id": "task-mock-1",
                         "priority": {"level": "high", "waiting_since_mins": 5},
                         "invoked_by": "agent-a",
-                        "waiting_since_mins": 5
+                        "waiting_since_mins": 5,
+                        "submitted_at": "2024-01-01T00:00:00Z" # Required by schema
                     }
-                ]
+                ],
+                "updated_at": "2024-01-01T00:00:00Z" # Required by schema
             })
             
         except Exception as e:

@@ -34,6 +34,9 @@ minikube kubectl -- apply -f infrastructure/kubernetes/namespace.yaml
 
 # Apply the Secrets (Contains your API Key and Supabase Key)
 minikube kubectl -- apply -f infrastructure/kubernetes/secrets/api-keys-secret.yaml
+
+# Apply ConfigMaps (Agent Configuration)
+minikube kubectl -- apply -f infrastructure/kubernetes/configmaps/
 ```
 
 ## 3. Build Images (Crucial Step)

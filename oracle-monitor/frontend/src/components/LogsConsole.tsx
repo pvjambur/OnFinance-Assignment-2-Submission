@@ -5,9 +5,10 @@ import type { LogEntry } from '@/types';
 interface LogsConsoleProps {
   logs: LogEntry[];
   maxHeight?: string;
+  onTaskClick?: (taskId: string) => void;
 }
 
-export function LogsConsole({ logs, maxHeight = 'max-h-96' }: LogsConsoleProps) {
+export function LogsConsole({ logs, maxHeight = 'max-h-96', onTaskClick }: LogsConsoleProps) {
   const getLevelColor = (level: LogEntry['level']) => {
     switch (level) {
       case 'error':
@@ -40,11 +41,11 @@ export function LogsConsole({ logs, maxHeight = 'max-h-96' }: LogsConsoleProps) 
 
   const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp);
-    return date.toLocaleTimeString('en-US', { 
-      hour: '2-digit', 
-      minute: '2-digit', 
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
       second: '2-digit',
-      hour12: false 
+      hour12: false
     });
   };
 
@@ -92,6 +93,16 @@ export function LogsConsole({ logs, maxHeight = 'max-h-96' }: LogsConsoleProps) 
             <span className="text-lavender flex-shrink-0 w-24 truncate">
               [{log.source}]
             </span>
+
+            {/* Task Badge */}
+            {log.taskId && (
+              <button
+                onClick={() => onTaskClick?.(log.taskId!)}
+                className="px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors text-[9px] font-mono font-bold"
+              >
+                {log.taskId}
+              </button>
+            )}
 
             {/* Message */}
             <span className={cn("flex-1", getLevelColor(log.level))}>
