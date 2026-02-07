@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware  # 1. Import Middleware
-from api.routes import agents, tasks, health, chat
+from api.routes import agents, tasks, health, chat, reports
 
 app = FastAPI(title="Oracle Monitor Agent API")
 
@@ -24,6 +24,7 @@ app.add_middleware(
 app.include_router(agents.router, prefix="/agents", tags=["agents"])
 app.include_router(tasks.router, prefix="/tasks", tags=["tasks"])
 app.include_router(chat.router, prefix="/chat", tags=["chat"])
+app.include_router(reports.router, prefix="/reports", tags=["reports"])
 app.include_router(health.router, tags=["health"])
 
 @app.get("/")

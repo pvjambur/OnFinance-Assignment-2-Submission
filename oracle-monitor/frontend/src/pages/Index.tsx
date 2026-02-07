@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Cpu, Server, Radio, Zap, Activity, Loader2, X } from 'lucide-react';
+import { Cpu, Server, Radio, Zap, Activity, Loader2, X, FileDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { MainLayout } from '@/components/layouts/MainLayout';
 import { StatCard } from '@/components/StatCard';
@@ -20,6 +20,7 @@ const Index = () => {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [loading, setLoading] = useState(true);
   const [isInitiating, setIsInitiating] = useState(false);
+  const [isDownloadingReport, setIsDownloadingReport] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -113,6 +114,25 @@ const Index = () => {
     setIsInitiating(false);
   };
 
+  const handleDownloadReport = async () => {
+    setIsDownloadingReport(true);
+    try {
+      const response = await fetch('http://localhost:8000/reports/progress-report');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `oracle_monitor_report_${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Failed to download report:', error);
+    }
+    setIsDownloadingReport(false);
+  };
+
   if (loading) {
     return (
       <MainLayout>
@@ -141,14 +161,25 @@ const Index = () => {
           </div>
         </div>
 
-        <button
-          onClick={handleInitiateTask}
-          disabled={isInitiating}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-xl font-bold hover:opacity-90 transition-all disabled:opacity-50"
-        >
-          {isInitiating ? <Loader2 size={18} className="animate-spin" /> : <Zap size={18} />}
-          Initiate Task
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleInitiateTask}
+            disabled={isInitiating}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-xl font-bold hover:opacity-90 transition-all disabled:opacity-50"
+          >
+            {isInitiating ? <Loader2 size={18} className="animate-spin" /> : <Zap size={18} />}
+            Initiate Task
+          </button>
+
+          <button
+            onClick={handleDownloadReport}
+            disabled={isDownloadingReport}
+            className="flex items-center gap-2 px-4 py-2 bg-accent text-accent-foreground rounded-xl font-bold hover:opacity-90 transition-all disabled:opacity-50"
+          >
+            {isDownloadingReport ? <Loader2 size={18} className="animate-spin" /> : <FileDown size={18} />}
+            Download PDF Report
+          </button>
+        </div>
       </div>
 
       {/* Stats Grid - Top Row */}

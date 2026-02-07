@@ -48,70 +48,66 @@ class BaseAgent(ABC):
 
     def register(self):
         """Register with retry logic."""
-        self._init_producer()
-        
         while not self._shutdown_event.is_set():
             try:
-                data = {
+                payload = {
                     "name": self.name,
                     "deployment_name": self.deployment_name,
-                    "activity": {"active_task_ids": []}
+                    "description": f"{self.name} agent",
+                    "models": [],
+                    "updated_at": datetime.now(timezone.utc).isoformat()
                 }
-                response = requests.post(f"{self.api_url}/agents/register", json=data, timeout=5)
-                response.raise_for_status()
-                logger.info(f"Agent {self.name} registered successfully.")
-                self.running = True
-                
-                # Start listener only after successful registration
-                threading.Thread(target=self.listen_for_tasks, daemon=True).start()
-                return
+                response = requests.post(f"{self.api_url}/agents/register", json=payload, timeout=5)
+                if response.status_code == 200:
+                    logger.info(f"Agent {self.name} registered successfully.")
+                    return
+                else:
+                    logger.warning(f"Registration failed: {response.status_code}. Retrying in 5s...")
             except Exception as e:
-                logger.error(f"Registration failed: {e}. Retrying in 5s...")
-                time.sleep(5)
+                logger.error(f"Failed to register: {e}. Retrying in 5s...")
+            time.sleep(5)
 
-    def listen_for_tasks(self):
-        """Robust listener loop that recovers from crashes."""
-        while self.running and not self._shutdown_event.is_set():
-            try:
-                # Re-initialize consumer if loop restarts due to error
-                consumer = KafkaConsumer(
-                    self.task_topic,
-                    bootstrap_servers=self.kafka_bootstrap_servers,
-                    group_id=f"{self.name}-group",
-                    auto_offset_reset='latest',
-                    value_deserializer=lambda x: json.loads(x.decode('utf-8')),
-                    consumer_timeout_ms=1000 # Fix: Don't block forever, check self.running
-                )
+    def heartbeat(self):
+        """Send heartbeat to API."""
+        try:
+            payload = {
+                "name": self.name,
+                "deployment_name": self.deployment_name,
+                "description": f"{self.name} agent",
+                "models": [],
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+            requests.post(f"{self.api_url}/agents/heartbeat", json=payload, timeout=2)
+        except Exception as e:
+            logger.debug(f"Heartbeat failed: {e}")
+
+    def _heartbeat_loop(self):
+        """Background heartbeat thread."""
+        while self.running:
+            self.heartbeat()
+            time.sleep(30)
+
+    def _consume_tasks(self):
+        """Consume tasks from Kafka (optional for agents that need it)."""
+        try:
+            self.consumer = KafkaConsumer(
+                self.task_topic,
+                bootstrap_servers=self.kafka_bootstrap_servers,
+                value_deserializer=lambda m: json.loads(m.decode('utf-8')),
+                group_id=f"{self.name}-group",
+                auto_offset_reset='latest'
+            )
+            logger.info(f"Agent {self.name} connected to Kafka Consumer.")
+            
+            for message in self.consumer:
+                if not self.running:
+                    break
+                task = message.value
+                logger.info(f"Received task: {task}")
+                # Process task (to be implemented by subclass)
                 
-                logger.info(f"Agent {self.name} listening...")
-                
-                for message in consumer:
-                    if not self.running: break
-                    
-                    task = message.value
-                    
-                    # Log logic to ensure we don't crash on missing keys
-                    task_id = task.get('id', 'unknown')
-                    target_agent = task.get('target_agent')
-
-                    # Fix: Filtering Logic
-                    # If using a unique group_id per agent instance, this is fine.
-                    # If sharing group_ids, you are "stealing" tasks from others.
-                    if target_agent and target_agent != self.name:
-                        continue 
-
-                    self.publish_log(f"Received task: {task_id}")
-                    
-                    # TODO: Actually process the task here
-                    
-            except Exception as e:
-                logger.error(f"Kafka Consumer error (restarting listener): {e}")
-                time.sleep(2) # Prevent tight loop crash
-            finally:
-                try:
-                    consumer.close()
-                except:
-                    pass
+        except Exception as e:
+            logger.error(f"Consumer error: {e}")
 
     def publish_log(self, message: str, level: str = "info", task_id: Optional[str] = None):
         # SAFETY CHECK: Only try to send if producer exists
@@ -144,3 +140,25 @@ class BaseAgent(ABC):
         Implementation MUST keep the process alive (e.g., while True: time.sleep(1))
         """
         pass
+    
+    def start(self):
+        """Start the agent - initializes connections and runs main loop."""
+        logger.info(f"Starting agent: {self.name}")
+        self._init_producer()
+        self.register()
+        self.running = True
+        
+        # Start heartbeat thread
+        heartbeat_thread = threading.Thread(target=self._heartbeat_loop, daemon=True)
+        heartbeat_thread.start()
+        
+        try:
+            self.run()
+        except KeyboardInterrupt:
+            logger.info(f"Agent {self.name} stopping...")
+        finally:
+            self.running = False
+            if self.producer:
+                self.producer.close()
+            if self.consumer:
+                self.consumer.close()

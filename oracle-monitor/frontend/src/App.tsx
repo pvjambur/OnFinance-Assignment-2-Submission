@@ -9,6 +9,7 @@ import InfraPage from "./pages/InfraPage";
 import QueuesPage from "./pages/QueuesPage";
 import LLMPage from "./pages/LLMPage";
 import SummaryPage from "./pages/SummaryPage";
+import SchemaPage from "./pages/SchemaPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/queues" element={<QueuesPage />} />
           <Route path="/llm" element={<LLMPage />} />
           <Route path="/summary" element={<SummaryPage />} />
+          <Route path="/schema" element={<SchemaPage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

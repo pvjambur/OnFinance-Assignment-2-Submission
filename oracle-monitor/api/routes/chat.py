@@ -48,7 +48,7 @@ async def query_oracle(request: ChatRequest):
         
         snapshot_context = "No system data available."
         if response.data:
-            snapshot = response.data[0].get("snapshot", {})
+            snapshot = response.data[0].get("state", {})
             snapshot_context = json.dumps(snapshot, indent=2)[:30000]
 
         # 2. Construct Prompt

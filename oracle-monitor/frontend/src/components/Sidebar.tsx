@@ -1,4 +1,4 @@
-import { Activity, LayoutDashboard, Server, Cpu, Database, Zap, FileText } from 'lucide-react';
+import { Activity, LayoutDashboard, Server, Cpu, Database, Zap, FileText, FileJson } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
@@ -20,6 +20,7 @@ export function Sidebar({ connected = true }: SidebarProps) {
     { icon: <Database size={18} />, label: 'Message Queues', href: '/queues' },
     { icon: <Zap size={18} />, label: 'LLM Nexus', href: '/llm' },
     { icon: <FileText size={18} />, label: 'Summary & Logs', href: '/summary' },
+    { icon: <FileJson size={18} />, label: 'Schema Parser', href: '/schema' },
   ];
 
   return (
